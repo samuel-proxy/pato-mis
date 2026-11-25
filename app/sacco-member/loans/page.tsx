@@ -1,117 +1,124 @@
 "use client";
 
-import { useMemo, useSyncExternalStore } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import Badge from "@/components/ui/Badge";
-import Table, { TableHead, TableRow, TableCell } from "@/components/ui/Table";
-import {
-  AppliedLoan,
-  getAppliedLoansSnapshot,
-  getServerAppliedLoansSnapshot,
-  parseAppliedLoans,
-  subscribeToAppliedLoans,
-} from "./appliedLoans";
+import { useAuth } from "@/hooks/useAuth";
+import { useLoans } from "@/hooks/useLoans";
+import Card from "@/components/ui/Card";
+import LoansTable from "@/components/tables/LoansTable";
+import LoanSchedule from "@/components/LoanSchedule";
+import type { Loan } from "@/types/loan";
+import type { Role } from "@/types/user";
 
-type Loan = AppliedLoan | {
-  id: string;
-  amount: number;
-  purpose: string;
-  date: string;
-  status: "Approved" | "Cleared";
-  balance: number;
-};
+const ROLES: Role[] = ["member"];
+const inp =
+  "w-full border border-slate-400 rounded px-3 py-2 text-sm bg-white text-black outline-none focus:border-blue-900";
 
-const initialLoans: Loan[] = [
-  {
-    id: "L-001",
-    amount: 15000,
-    purpose: "School Fees",
-    date: "10 Oct 2026",
-    status: "Approved",
-    balance: 9000,
-  },
-  {
-    id: "L-002",
-    amount: 8000,
-    purpose: "Business Stock",
-    date: "05 Aug 2026",
-    status: "Cleared",
-    balance: 0,
-  },
-];
+/** My loans (FR04 repay, FR11 schedule). */
+export default function MemberLoansPage() {
+  const { db, user, ready, msg } = useAuth(ROLES);
+  const { myLoans, repay } = useLoans();
+  const [scheduleLoan, setScheduleLoan] = useState<Loan | null>(null);
+  const [repayLoanId, setRepayLoanId] = useState("");
+  const [repayAmt, setRepayAmt] = useState("");
 
-export default function LoansPage() {
-  const appliedLoansSnapshot = useSyncExternalStore(
-    subscribeToAppliedLoans,
-    getAppliedLoansSnapshot,
-    getServerAppliedLoansSnapshot,
-  );
-  const loans = useMemo<Loan[]>(
-    () => [...initialLoans, ...parseAppliedLoans(appliedLoansSnapshot)],
-    [appliedLoansSnapshot],
-  );
+  if (!ready || !db || !user) return <p className="text-sm text-slate-500">Loading...</p>;
+
+  function doRepay() {
+    const ok = repay(repayLoanId, Number(repayAmt) || 0, "Web");
+    if (ok) setRepayAmt("");
+  }
 
   return (
-    <section className="p-6 md:p-10 space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">My Loans</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            View your loan history and apply for a new loan.
-          </p>
+          <p className="mt-1 text-sm text-slate-500">View your loans, repay, and see schedules.</p>
         </div>
-
         <Link
           href="/sacco-member/loans/apply"
-          className="rounded bg-blue-900 px-4 py-2 text-sm text-white hover:bg-blue-800"
+          className="rounded bg-blue-900 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800"
         >
           Apply for a Loan
         </Link>
       </div>
 
-      <div>
-        <h2 className="mb-3 font-bold text-slate-900">Loan History</h2>
+      {msg && (
+        <p className="rounded border border-slate-300 bg-slate-50 px-3 py-2 text-sm">{msg}</p>
+      )}
 
-        <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Loan ID</TableCell>
-                <TableCell>Amount</TableCell>
-                <TableCell>Purpose</TableCell>
-                <TableCell>Date</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Balance</TableCell>
-              </TableRow>
-            </TableHead>
-
-            <tbody>
-              {loans.map((loan) => (
-                <TableRow key={loan.id}>
-                  <TableCell className="font-medium text-slate-800">
-                    <Link href={`/sacco-member/loans/${loan.id}`} className="hover:underline">
-                      {loan.id}
-                    </Link>
-                  </TableCell>
-                  <TableCell className="font-semibold text-black">
-                    KSh {loan.amount.toLocaleString("en-KE")}
-                  </TableCell>
-                  <TableCell className="text-slate-700">{loan.purpose}</TableCell>
-                  <TableCell className="text-slate-600">{loan.date}</TableCell>
-                  <TableCell>
-                    <Badge variant={loan.status === "Approved" ? "success" : "default"}>
-                      {loan.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="font-semibold text-black">
-                    KSh {loan.balance.toLocaleString("en-KE")}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </tbody>
-          </Table>
+      <Card>
+        <h3 className="mb-3 font-bold text-slate-900">Repay a Loan</h3>
+        <div className="flex flex-wrap items-end gap-2">
+          <label className="block text-sm">
+            <span className="text-slate-600">Loan</span>
+            <select
+              className={`${inp} mt-1`}
+              value={repayLoanId}
+              onChange={(e) => setRepayLoanId(e.target.value)}
+            >
+              <option value="">Select loan</option>
+              {myLoans
+                .filter((l) => l.status === "Disbursed")
+                .map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.id} — outstanding {((l.amountCents - l.repaidCents) / 100).toLocaleString("en-KE")} KES
+                  </option>
+                ))}
+            </select>
+          </label>
+          <label className="block text-sm">
+            <span className="text-slate-600">Amount (KES)</span>
+            <input
+              className={`${inp} mt-1`}
+              type="number"
+              value={repayAmt}
+              onChange={(e) => setRepayAmt(e.target.value)}
+            />
+          </label>
+          <button
+            type="button"
+            onClick={doRepay}
+            className="rounded bg-blue-900 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800"
+          >
+            Record repayment
+          </button>
         </div>
-      </div>
-    </section>
+      </Card>
+
+      <Card>
+        <h3 className="mb-3 font-bold text-slate-900">My Loans</h3>
+        <LoansTable
+          loans={myLoans}
+          products={db.products}
+          actions={(loan) => (
+            <button
+              type="button"
+              onClick={() => setScheduleLoan(loan)}
+              className="rounded border border-slate-400 px-3 py-1 text-sm text-slate-700 hover:bg-slate-100"
+            >
+              Schedule
+            </button>
+          )}
+        />
+      </Card>
+
+      {scheduleLoan && (
+        <Card>
+          <div className="mb-2 flex items-center justify-between">
+            <h3 className="font-bold text-slate-900">Repayment schedule — {scheduleLoan.id}</h3>
+            <button
+              type="button"
+              onClick={() => setScheduleLoan(null)}
+              className="rounded border px-3 py-1 text-sm"
+            >
+              Close
+            </button>
+          </div>
+          <LoanSchedule loan={scheduleLoan} />
+        </Card>
+      )}
+    </div>
   );
 }

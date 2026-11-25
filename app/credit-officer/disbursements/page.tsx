@@ -1,49 +1,58 @@
 "use client";
 
-import Table, { TableHead, TableRow, TableCell } from "@/components/ui/Table";
+import { useAuth } from "@/hooks/useAuth";
+import { useLoans } from "@/hooks/useLoans";
+import Card from "@/components/ui/Card";
+import LoansTable from "@/components/tables/LoansTable";
+import type { Role } from "@/types/user";
 
-const disbursements = [
-  { id: "DIS-001", loan: "L-001", member: "John Mwangi", amount: 15000, date: "12 Oct 2026", status: "Completed" },
-  { id: "DIS-002", loan: "L-002", member: "Mary Wanjiru", amount: 8000, date: "20 Oct 2026", status: "Pending" },
-];
+const ROLES: Role[] = ["officer"];
 
+/** Disbursements (FR12): approved loans waiting to be paid out, and disbursed loans. */
 export default function DisbursementsPage() {
+  const { db, ready, msg } = useAuth(ROLES);
+  const { disburse } = useLoans();
+
+  if (!ready || !db) return <p className="text-sm text-slate-500">Loading...</p>;
+  const approved = db.loans.filter((l) => l.status === "Approved");
+  const disbursed = db.loans.filter((l) => l.status === "Disbursed" || l.status === "Repaid");
+
   return (
-    <section className="p-6 md:p-10 space-y-6">
+    <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Disbursements</h1>
-        <p className="mt-1 text-sm text-slate-500">Track loan disbursement payments to members.</p>
+        <p className="mt-1 text-sm text-slate-500">
+          Disburse approved loans. Disbursement records a transaction and sends an SMS
+          confirmation to the member.
+        </p>
       </div>
 
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableCell>Disbursement ID</TableCell>
-            <TableCell>Loan</TableCell>
-            <TableCell>Member</TableCell>
-            <TableCell>Amount</TableCell>
-            <TableCell>Date</TableCell>
-            <TableCell>Status</TableCell>
-          </TableRow>
-        </TableHead>
+      {msg && (
+        <p className="rounded border border-slate-300 bg-slate-50 px-3 py-2 text-sm">{msg}</p>
+      )}
 
-        <tbody>
-          {disbursements.map((item) => (
-            <TableRow key={item.id}>
-              <TableCell className="font-medium text-slate-800">{item.id}</TableCell>
-              <TableCell className="text-slate-700">{item.loan}</TableCell>
-              <TableCell className="text-slate-600">{item.member}</TableCell>
-              <TableCell>KSh {item.amount.toLocaleString("en-KE")}</TableCell>
-              <TableCell className="text-slate-600">{item.date}</TableCell>
-              <TableCell>
-                <span className={`rounded-full px-2 py-1 text-xs ${item.status === "Completed" ? "bg-green-100 text-green-800" : "bg-orange-100 text-orange-800"}`}>
-                  {item.status}
-                </span>
-              </TableCell>
-            </TableRow>
-          ))}
-        </tbody>
-      </Table>
-    </section>
+      <Card>
+        <h3 className="mb-3 font-bold text-slate-900">Approved — Awaiting Disbursement</h3>
+        <LoansTable
+          loans={approved}
+          products={db.products}
+          showMember
+          actions={(loan) => (
+            <button
+              type="button"
+              onClick={() => disburse(loan.id)}
+              className="rounded bg-blue-900 px-3 py-1 text-sm font-medium text-white hover:bg-blue-800"
+            >
+              Disburse
+            </button>
+          )}
+        />
+      </Card>
+
+      <Card>
+        <h3 className="mb-3 font-bold text-slate-900">Disbursed Loans</h3>
+        <LoansTable loans={disbursed} products={db.products} showMember />
+      </Card>
+    </div>
   );
 }

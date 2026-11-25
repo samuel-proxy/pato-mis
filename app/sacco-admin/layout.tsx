@@ -1,27 +1,29 @@
+"use client";
+
+import { PatoProvider } from "@/hooks/usePato";
+import { useSession } from "@/hooks/useAuth";
 import DashboardLayout from "@/components/layout/DashboardLayout";
+import { NAV_ITEMS, ROLE_LABEL } from "@/lib/constants";
 
-const navItems = [
-  { name: "Dashboard", href: "/sacco-admin/dashboard" },
-  { name: "Members", href: "/sacco-admin/members" },
-  { name: "Loan Products", href: "/sacco-admin/loan-products" },
-  { name: "Policies", href: "/sacco-admin/policies" },
-  { name: "Feedback", href: "/sacco-admin/feedback" },
-];
-
-export default function AdminLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+function AdminLayoutInner({ children }: Readonly<{ children: React.ReactNode }>) {
+  const { user } = useSession();
   return (
     <DashboardLayout
       title="Administrator Portal"
       subtitle="SACCO Management"
-      userName="Admin"
-      userRole="Administrator"
-      navItems={navItems}
+      userName={user?.name}
+      userRole={user ? ROLE_LABEL[user.role] : "Administrator"}
+      navItems={NAV_ITEMS.sacco_admin}
     >
       {children}
     </DashboardLayout>
+  );
+}
+
+export default function AdminLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  return (
+    <PatoProvider>
+      <AdminLayoutInner>{children}</AdminLayoutInner>
+    </PatoProvider>
   );
 }

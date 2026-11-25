@@ -1,27 +1,29 @@
+"use client";
+
+import { PatoProvider } from "@/hooks/usePato";
+import { useSession } from "@/hooks/useAuth";
 import DashboardLayout from "@/components/layout/DashboardLayout";
+import { NAV_ITEMS, ROLE_LABEL } from "@/lib/constants";
 
-const navItems = [
-  { name: "Dashboard", href: "/credit-officer/dashboard" },
-  { name: "Loan Applications", href: "/credit-officer/loan-applications" },
-  { name: "Disbursements", href: "/credit-officer/disbursements" },
-  { name: "Repayments", href: "/credit-officer/repayments" },
-  { name: "Members", href: "/credit-officer/members" },
-];
-
-export default function CreditOfficerLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+function CreditOfficerLayoutInner({ children }: Readonly<{ children: React.ReactNode }>) {
+  const { user } = useSession();
   return (
     <DashboardLayout
       title="Credit Officer Portal"
       subtitle="Loan Management"
-      userName="Officer"
-      userRole="Credit Officer"
-      navItems={navItems}
+      userName={user?.name}
+      userRole={user ? ROLE_LABEL[user.role] : "Credit Officer"}
+      navItems={NAV_ITEMS.officer}
     >
       {children}
     </DashboardLayout>
+  );
+}
+
+export default function CreditOfficerLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  return (
+    <PatoProvider>
+      <CreditOfficerLayoutInner>{children}</CreditOfficerLayoutInner>
+    </PatoProvider>
   );
 }

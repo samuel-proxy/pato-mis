@@ -3,15 +3,25 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import LoginForm from "@/components/forms/LoginForm";
+import { login } from "@/services/authService";
+import { roleHome } from "@/lib/auth";
+import { DEMO_LOGINS, ROLE_LABEL } from "@/lib/constants";
 
+/** Sign in (FR01). Credentials are checked against the store; wrong passwords and deactivated accounts are refused. */
 export default function LoginPage() {
-  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
   const router = useRouter();
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    router.push("/sacco-member/dashboard"); //Takes member to the dasboard page, when backend is intergrated users will have be authenticated to access data.
-  };
+  function handleLogin(username: string, password: string) {
+    const result = login(username, password);
+    if ("error" in result) {
+      setError(result.error);
+      return;
+    }
+    setError("");
+    router.push(roleHome(result.user.role));
+  }
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-10">
@@ -19,86 +29,32 @@ export default function LoginPage() {
         <h1 className="mb-6 text-xl font-bold text-slate-900">PATO SACCO</h1>
 
         <h2 className="mb-2 text-lg font-bold text-slate-900">Sign In</h2>
-        <p className="mb-6 text-sm text-slate-500">
-          Enter your account details to continue.
+        <p className="mb-6 text-sm text-slate-500">Enter your account details to continue.</p>
+
+        <LoginForm onSubmit={handleLogin} error={error} />
+
+        <p className="mt-4 text-xs text-slate-500">
+          Login is required on every page. Sessions last 8 hours. Demo data is stored in your
+          browser only.
         </p>
 
-        <form className="space-y-5" onSubmit={handleSubmit}>
-          <div>
-            <label
-              htmlFor="email"
-              className="block text-sm font-medium text-slate-700"
-            >
-              Email Address
-            </label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              placeholder="Enter your email address"
-              required
-              className="mt-1 w-full px-3 py-2 border border-slate-400 rounded bg-white text-black opacity-100 placeholder:text-slate-500 outline-none focus:border-blue-900"
-            />
-          </div>
-
-          <div>
-            <div className="flex justify-between">
-              <label
-                htmlFor="password"
-                className="text-sm font-medium text-slate-700"
-              >
-                Password
-              </label>
-              <a
-                href="/forgot-password"
-                className="text-sm text-slate-600 hover:underline"
-              >
-                Forgot password?
-              </a>
-            </div>
-
-            <div className="mt-1 relative">
-              <input
-                type={showPassword ? "text" : "password"}
-                id="password"
-                name="password"
-                placeholder="Enter your password"
-                required
-                className="w-full px-3 py-2 pr-20 border border-slate-400 rounded bg-white text-black opacity-100 placeholder:text-slate-500 outline-none focus:border-blue-900"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-600 hover:text-slate-800"
-              >
-                {showPassword ? "Hide" : "Show"}
-              </button>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <input type="checkbox" id="remember" className="h-4 w-4" />
-            <label htmlFor="remember" className="text-sm text-slate-600">
-              Remember me
-            </label>
-          </div>
-
-          <button
-            type="submit"
-            className="w-full rounded bg-blue-900 py-2 text-sm font-medium text-white hover:bg-blue-800"
-          >
-            Sign In
-          </button>
-        </form>
+        <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm">
+          <p className="mb-2 font-semibold text-slate-900">Demo logins</p>
+          <ul className="space-y-1 text-slate-700">
+            {DEMO_LOGINS.map((d) => (
+              <li key={d.username}>
+                <b>{ROLE_LABEL[d.role]}:</b> {d.username} / {d.password}
+                {d.name ? ` — ${d.name}` : ""}
+              </li>
+            ))}
+          </ul>
+        </div>
 
         <p className="mt-6 text-center text-sm text-slate-500">
           Need assistance? Contact your SACCO administrator.
         </p>
 
-        <Link
-          href="/"
-          className="mt-4 block text-center text-sm text-slate-600 hover:underline"
-        >
+        <Link href="/" className="mt-4 block text-center text-sm text-slate-600 hover:underline">
           Back to Homepage
         </Link>
       </div>

@@ -1,23 +1,9 @@
+import Navbar from "@/components/layout/Navbar";
+
 export default function Home() {
   return (
     <main className="min-h-screen bg-white text-slate-800">
-      <nav className="flex items-center justify-between border-b border-slate-300 px-8 py-4">
-        <h1 className="text-xl font-bold text-slate-900">PATO SACCO</h1>
-
-        <div className="hidden items-center gap-6 md:flex">
-          <a href="#home" className="text-sm hover:underline">Home</a>
-          <a href="#about" className="text-sm hover:underline">About</a>
-          <a href="#services" className="text-sm hover:underline">Services</a>
-          <a href="#contact" className="text-sm hover:underline">Contact</a>
-        </div>
-
-        <a
-          href="/login"
-          className="rounded border border-slate-400 px-4 py-2 text-sm hover:bg-slate-100"
-        >
-          Login
-        </a>
-      </nav>
+      <Navbar />
 
       <section
         id="home"

@@ -1,50 +1,81 @@
 "use client";
 
-import Table, { TableHead, TableRow, TableCell } from "@/components/ui/Table";
+import { useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { useLoans } from "@/hooks/useLoans";
+import Card from "@/components/ui/Card";
+import TransactionsTable from "@/components/tables/TransactionsTable";
+import { fmtKES } from "@/lib/store";
+import type { Role } from "@/types/user";
 
-const repayments = [
-  { id: "REP-001", loan: "L-001", member: "John Mwangi", amount: 1500, date: "10 Nov 2026", status: "Paid" },
-  { id: "REP-002", loan: "L-001", member: "John Mwangi", amount: 1500, date: "10 Oct 2026", status: "Paid" },
-  { id: "REP-003", loan: "L-002", member: "Mary Wanjiru", amount: 800, date: "05 Nov 2026", status: "Pending" },
-];
+const ROLES: Role[] = ["officer"];
+const inp =
+  "w-full border border-slate-400 rounded px-3 py-2 text-sm bg-white text-black outline-none focus:border-blue-900";
 
+/** Record loan repayments at the office (FR13). */
 export default function RepaymentsPage() {
+  const { db, ready, msg } = useAuth(ROLES);
+  const { officerRepay } = useLoans();
+  const [loanId, setLoanId] = useState("");
+  const [amount, setAmount] = useState("");
+
+  if (!ready || !db) return <p className="text-sm text-slate-500">Loading...</p>;
+  const disbursed = db.loans.filter((l) => l.status === "Disbursed");
+  const repayments = db.txns.filter((t) => t.type === "Loan Repayment");
+
+  function record() {
+    const ok = officerRepay(loanId, Number(amount) || 0);
+    if (ok) setAmount("");
+  }
+
   return (
-    <section className="p-6 md:p-10 space-y-6">
+    <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Repayments</h1>
-        <p className="mt-1 text-sm text-slate-500">Monitor loan repayment collections.</p>
+        <p className="mt-1 text-sm text-slate-500">Record a loan repayment received at the office.</p>
       </div>
 
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableCell>Repayment ID</TableCell>
-            <TableCell>Loan</TableCell>
-            <TableCell>Member</TableCell>
-            <TableCell>Amount</TableCell>
-            <TableCell>Date</TableCell>
-            <TableCell>Status</TableCell>
-          </TableRow>
-        </TableHead>
+      {msg && (
+        <p className="rounded border border-slate-300 bg-slate-50 px-3 py-2 text-sm">{msg}</p>
+      )}
 
-        <tbody>
-          {repayments.map((item) => (
-            <TableRow key={item.id}>
-              <TableCell className="font-medium text-slate-800">{item.id}</TableCell>
-              <TableCell className="text-slate-700">{item.loan}</TableCell>
-              <TableCell className="text-slate-600">{item.member}</TableCell>
-              <TableCell>KSh {item.amount.toLocaleString("en-KE")}</TableCell>
-              <TableCell className="text-slate-600">{item.date}</TableCell>
-              <TableCell>
-                <span className={`rounded-full px-2 py-1 text-xs ${item.status === "Paid" ? "bg-green-100 text-green-800" : "bg-orange-100 text-orange-800"}`}>
-                  {item.status}
-                </span>
-              </TableCell>
-            </TableRow>
-          ))}
-        </tbody>
-      </Table>
-    </section>
+      <Card>
+        <h3 className="mb-3 font-bold text-slate-900">Record a Loan Repayment (office)</h3>
+        <div className="flex flex-wrap items-end gap-2">
+          <label className="block text-sm">
+            <span className="text-slate-600">Loan</span>
+            <select className={`${inp} mt-1`} value={loanId} onChange={(e) => setLoanId(e.target.value)}>
+              <option value="">Select loan</option>
+              {disbursed.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.id} — {l.memberId} — outstanding {fmtKES(l.amountCents - l.repaidCents)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block text-sm">
+            <span className="text-slate-600">Amount (KES)</span>
+            <input
+              className={`${inp} mt-1`}
+              type="number"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+            />
+          </label>
+          <button
+            type="button"
+            onClick={record}
+            className="rounded bg-blue-900 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800"
+          >
+            Record repayment
+          </button>
+        </div>
+      </Card>
+
+      <Card>
+        <h3 className="mb-3 font-bold text-slate-900">Recent Repayments</h3>
+        <TransactionsTable txns={repayments} showMember />
+      </Card>
+    </div>
   );
 }

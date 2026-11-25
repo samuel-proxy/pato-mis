@@ -1,99 +1,82 @@
 "use client";
 
-import Table, { TableHead, TableRow, TableCell } from "@/components/ui/Table";
+import { useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import Card from "@/components/ui/Card";
+import TransactionsTable from "@/components/tables/TransactionsTable";
+import { fmtKES, toCents } from "@/lib/store";
+import * as savingsService from "@/services/savingsService";
+import type { Role } from "@/types/user";
 
-const contributions = [
-  { id: 1, date: "15 Nov 2026", reference: "SAV-001", description: "Monthly Contribution", amount: 2000, status: "Confirmed" },
-  { id: 2, date: "01 Nov 2026", reference: "SAV-002", description: "Monthly Contribution", amount: 2000, status: "Confirmed" },
-  { id: 3, date: "15 Oct 2026", reference: "SAV-003", description: "Monthly Contribution", amount: 1500, status: "Confirmed" },
-  { id: 4, date: "01 Oct 2026", reference: "SAV-004", description: "Monthly Contribution", amount: 2000, status: "Confirmed" },
-  { id: 5, date: "15 Sep 2026", reference: "SAV-005", description: "Monthly Contribution", amount: 1500, status: "Confirmed" },
-];
+const ROLES: Role[] = ["member"];
+const inp =
+  "w-full border border-slate-400 rounded px-3 py-2 text-sm bg-white text-black outline-none focus:border-blue-900";
 
+/** Savings and contributions (FR07). */
 export default function SavingsPage() {
-  const totalSavings = contributions.reduce((total, item) => total + item.amount, 0);
+  const { db, user, ready, msg, run } = useAuth(ROLES);
+  const [amount, setAmount] = useState("");
+
+  if (!ready || !db || !user) return <p className="text-sm text-slate-500">Loading...</p>;
+  const me = db.members.find((m) => m.id === user.memberId);
+  if (!me) return <p className="text-sm text-slate-500">No member record found for this account.</p>;
+  const memberId = me.id;
+  const actor = user.username;
+
+  const myContributions = db.txns.filter(
+    (t) => t.memberId === me.id && t.type === "Contribution"
+  );
+
+  function postContribution() {
+    const ok = run((d) =>
+      savingsService.contribute(d, memberId, toCents(Number(amount) || 0), actor, "Web")
+    );
+    if (ok) setAmount("");
+  }
 
   return (
-    <section className="p-6 md:p-10 space-y-6">
+    <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">My Savings</h1>
         <p className="mt-1 text-sm text-slate-500">
-          View your savings balance and contribution history.
+          Deposits {fmtKES(me.depositsCents)} • Savings {fmtKES(me.savingsCents)} • Contributions
+          increase your deposits and your loan eligibility.
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <div>
-          <p className="text-sm font-medium text-slate-500">Total Savings</p>
-          <h2 className="mt-2 text-2xl font-bold text-slate-900">
-            KSh {totalSavings.toLocaleString("en-KE")}
-          </h2>
-          <p className="mt-1 text-xs text-slate-400">Accumulated contributions</p>
-        </div>
+      {msg && (
+        <p className="rounded border border-slate-300 bg-slate-50 px-3 py-2 text-sm">{msg}</p>
+      )}
 
-        <div>
-          <p className="text-sm font-medium text-slate-500">Total Contributions</p>
-          <h2 className="mt-2 text-2xl font-bold text-slate-900">{contributions.length}</h2>
-          <p className="mt-1 text-xs text-slate-400">Confirmed transactions</p>
-        </div>
-
-        <div>
-          <p className="text-sm font-medium text-slate-500">Latest Contribution</p>
-          <h2 className="mt-2 text-2xl font-bold text-slate-900">KSh 2,000</h2>
-          <p className="mt-1 text-xs text-slate-400">15 November 2026</p>
-        </div>
-      </div>
-
-      <div>
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-300 pb-3">
-          <div>
-            <h2 className="font-bold text-slate-900">Contribution History</h2>
-            <p className="mt-1 text-xs text-slate-500">A record of your savings contributions.</p>
-          </div>
-
+      <Card>
+        <h3 className="mb-2 font-bold text-slate-900">Post a Savings Contribution</h3>
+        <p className="mb-3 text-sm text-slate-600">
+          Minimum monthly contribution: {fmtKES(db.settings.minContributionCents)}.
+        </p>
+        <div className="flex flex-wrap items-end gap-2">
+          <label className="block text-sm">
+            <span className="text-slate-600">Amount (KES)</span>
+            <input
+              className={`${inp} mt-1`}
+              type="number"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+            />
+          </label>
           <button
             type="button"
-            onClick={() => window.print()}
-            className="rounded border border-slate-400 px-3 py-1 text-sm text-slate-800 hover:bg-slate-100"
+            onClick={postContribution}
+            className="rounded bg-blue-900 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800"
           >
-            Print Statement
+            Post contribution
           </button>
         </div>
+      </Card>
 
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Date</TableCell>
-              <TableCell>Reference</TableCell>
-              <TableCell>Description</TableCell>
-              <TableCell>Amount</TableCell>
-              <TableCell>Status</TableCell>
-            </TableRow>
-          </TableHead>
-
-          <tbody>
-            {contributions.map((item) => (
-              <TableRow key={item.id}>
-                <TableCell className="text-slate-600">{item.date}</TableCell>
-                <TableCell className="font-medium text-slate-800">{item.reference}</TableCell>
-                <TableCell className="text-slate-700">{item.description}</TableCell>
-                <TableCell className="font-semibold text-slate-900">
-                  KSh {item.amount.toLocaleString("en-KE")}
-                </TableCell>
-                <TableCell>
-                  <span className="rounded-full bg-green-100 px-2 py-1 text-xs text-green-800">
-                    {item.status}
-                  </span>
-                </TableCell>
-              </TableRow>
-            ))}
-          </tbody>
-        </Table>
-
-        <p className="mt-3 text-sm text-slate-500">
-          Showing {contributions.length} contributions
-        </p>
-      </div>
-    </section>
+      <Card>
+        <h3 className="mb-3 font-bold text-slate-900">My Contributions</h3>
+        <TransactionsTable txns={myContributions} />
+      </Card>
+    </div>
   );
 }

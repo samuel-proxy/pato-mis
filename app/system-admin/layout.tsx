@@ -1,29 +1,29 @@
+"use client";
+
+import { PatoProvider } from "@/hooks/usePato";
+import { useSession } from "@/hooks/useAuth";
 import DashboardLayout from "@/components/layout/DashboardLayout";
+import { NAV_ITEMS, ROLE_LABEL } from "@/lib/constants";
 
-const navItems = [
-  { name: "Dashboard", href: "/system-admin/dashboard" },
-  { name: "Users", href: "/system-admin/users" },
-  { name: "Roles", href: "/system-admin/roles" },
-  { name: "Audit Logs", href: "/system-admin/audit-logs" },
-  { name: "Reports", href: "/system-admin/reports" },
-  { name: "Backups", href: "/system-admin/backups" },
-  { name: "Loan Products", href: "/system-admin/loan-products" },
-];
-
-export default function SystemAdminLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+function SystemAdminLayoutInner({ children }: Readonly<{ children: React.ReactNode }>) {
+  const { user } = useSession();
   return (
     <DashboardLayout
       title="System Administrator"
       subtitle="Platform Management"
-      userName="SysAdmin"
-      userRole="System Admin"
-      navItems={navItems}
+      userName={user?.name}
+      userRole={user ? ROLE_LABEL[user.role] : "System Admin"}
+      navItems={NAV_ITEMS.sysadmin}
     >
       {children}
     </DashboardLayout>
+  );
+}
+
+export default function SystemAdminLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  return (
+    <PatoProvider>
+      <SystemAdminLayoutInner>{children}</SystemAdminLayoutInner>
+    </PatoProvider>
   );
 }

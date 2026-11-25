@@ -1,3 +1,8 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { logoutUser } from "@/lib/auth";
+
 export interface NavItem {
   name: string;
   href: string;
@@ -10,6 +15,13 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ title, subtitle, items }: SidebarProps) {
+  const router = useRouter();
+
+  function signOut() {
+    logoutUser();
+    router.push("/login");
+  }
+
   return (
     <aside className="hidden w-64 flex-col bg-slate-100 border-r border-slate-300 md:flex">
       <div className="border-b border-slate-300 px-6 py-6">
@@ -30,12 +42,13 @@ export default function Sidebar({ title, subtitle, items }: SidebarProps) {
       </nav>
 
       <div className="border-t border-slate-300 p-4">
-        <a
-          href="/login"
-          className="block px-3 py-2 text-sm text-slate-700 rounded hover:bg-slate-200"
+        <button
+          type="button"
+          onClick={signOut}
+          className="block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-200"
         >
           Sign Out
-        </a>
+        </button>
       </div>
     </aside>
   );

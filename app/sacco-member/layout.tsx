@@ -1,28 +1,29 @@
+"use client";
+
+import { PatoProvider } from "@/hooks/usePato";
+import { useSession } from "@/hooks/useAuth";
 import DashboardLayout from "@/components/layout/DashboardLayout";
+import { NAV_ITEMS, ROLE_LABEL } from "@/lib/constants";
 
-const navItems = [
-  { name: "Dashboard", href: "/sacco-member/dashboard" },
-  { name: "My Savings", href: "/sacco-member/savings" },
-  { name: "Loans", href: "/sacco-member/loans" },
-  { name: "Withdrawals", href: "/sacco-member/withdrawals" },
-  { name: "Statements", href: "/sacco-member/statements" },
-  { name: "My Profile", href: "/sacco-member/profile" },
-];
-
-export default function MemberLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+function MemberLayoutInner({ children }: Readonly<{ children: React.ReactNode }>) {
+  const { user } = useSession();
   return (
     <DashboardLayout
       title="Member Portal"
       subtitle="Savings & Loans"
-      userName="Samuel Musyoka"
-      userRole="Member"
-      navItems={navItems}
+      userName={user?.name}
+      userRole={user ? ROLE_LABEL[user.role] : "Member"}
+      navItems={NAV_ITEMS.member}
     >
       {children}
     </DashboardLayout>
+  );
+}
+
+export default function MemberLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  return (
+    <PatoProvider>
+      <MemberLayoutInner>{children}</MemberLayoutInner>
+    </PatoProvider>
   );
 }
